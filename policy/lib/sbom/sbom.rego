@@ -12,8 +12,8 @@ import rego.v1
 
 all_sboms := array.concat(cyclonedx_sboms, spdx_sboms)
 
-cyclonedx_sboms := array.concat(_cyclonedx_sboms_from_attestations, _cyclonedx_sboms_from_oci, _cyclonedx_sboms_from_content_inspection)
-
+_standard_cyclonedx_sboms := array.concat(_cyclonedx_sboms_from_attestations, _cyclonedx_sboms_from_oci)
+cyclonedx_sboms := array.concat(_standard_cyclonedx_sboms, _cyclonedx_sboms_from_content_inspection)
 _cyclonedx_sboms_from_attestations := [statement.predicate |
 	some att in input.attestations
 	statement := att.statement
