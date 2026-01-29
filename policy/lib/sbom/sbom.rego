@@ -27,21 +27,30 @@ _cyclonedx_sboms_from_oci := [sbom |
 	sbom.bomFormat == "CycloneDX"
 ]
 
-# 3. The Workaround: Fetch "naked" SBOM attachments from the registry
+# The Workaround: Fetch "naked" SBOM attachments from the registry
 _cyclonedx_sboms_by_convention := [sbom |
-    # A. Parse the image string (e.g. "quay.io/...@sha256:...") into an object
+    # A. Parse the image string into an object
     img := image.parse(input.image.ref)
     
     # B. Construct the SBOM tag (sha256-<digest>.sbom)
-    # img.repo is "quay.io/ibm-asmw-release-devel/cosign_testing"
-    # img.digest is "sha256:22dd..."
     clean_digest := replace(img.digest, "sha256:", "")
-    sbom_tag := sprintf("%s:sha256-%s.sbom", [img.repo, clean_digest])
+    sbom_tag_ref := sprintf("%s:sha256-%s.sbom", [img.repo, clean_digest])
 
-    # C. Fetch it directly
-    blob := ec.oci.blob(sbom_tag)
+    # C. Fetch the MANIFEST first (Tags work here!)
+    # This retrieves the JSON list of layers for the attachment
+    manifest := ec.oci.image_manifest(sbom_tag_ref)
+
+    # D. Extract the Digest of the first layer (The SBOM content)
+    # Cosign attachments always put the content in layers[0]
+    layer_digest := manifest.layers[0].digest
+
+    # E. Construct the Blob Reference (Must use @ separator)
+    blob_ref := sprintf("%s@%s", [img.repo, layer_digest])
+
+    # F. Fetch the actual Content Blob
+    blob := ec.oci.blob(blob_ref)
     
-    # D. Decode and verify it's CycloneDX
+    # G. Decode and verify it's CycloneDX
     sbom := json.unmarshal(blob)
     sbom.bomFormat == "CycloneDX"
 ]
