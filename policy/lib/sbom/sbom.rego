@@ -13,7 +13,7 @@ import rego.v1
 all_sboms := array.concat(cyclonedx_sboms, spdx_sboms)
 
 _standard_cyclonedx_sboms := array.concat(_cyclonedx_sboms_from_attestations, _cyclonedx_sboms_from_oci)
-cyclonedx_sboms := array.concat(_standard_cyclonedx_sboms, _cyclonedx_sboms_from_raw_conent)
+cyclonedx_sboms := array.concat(_standard_cyclonedx_sboms, _cyclonedx_sboms_by_convention)
 _cyclonedx_sboms_from_attestations := [statement.predicate |
 	some att in input.attestations
 	statement := att.statement
@@ -27,10 +27,20 @@ _cyclonedx_sboms_from_oci := [sbom |
 	sbom.bomFormat == "CycloneDX"
 ]
 
-# [TEMPORARY] Workaround check: ignores predicateType, inspects payload content
-_cyclonedx_sboms_from_raw_conent := [att.statement |
-    some att in input.attestations
-    att.statement.bomFormat == "CycloneDX"
+# 3. The Workaround: Fetch "naked" SBOM attachments from the registry
+_cyclonedx_sboms_by_convention := [sbom |
+    # A. Calculate the SBOM tag (sha256-<digest>.sbom)
+    image_digest := input.image.ref.digest
+    repo_url := ec.purl.parse(sprintf("pkg:oci/image?repository_url=%s", [input.image.ref.repo])).qualifiers.repository_url
+    clean_digest := replace(image_digest, "sha256:", "")
+    sbom_tag := sprintf("%s:sha256-%s.sbom", [repo_url, clean_digest])
+
+    # B. Fetch it directly (Bypassing ec's input.json)
+    blob := ec.oci.blob(sbom_tag)
+    
+    # C. Decode and verify it's CycloneDX
+    sbom := json.unmarshal(blob)
+    sbom.bomFormat == "CycloneDX"
 ]
 
 spdx_sboms := array.concat(_spdx_sboms_from_attestations, _spdx_sboms_from_oci)
