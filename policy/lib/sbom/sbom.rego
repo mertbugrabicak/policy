@@ -29,16 +29,19 @@ _cyclonedx_sboms_from_oci := [sbom |
 
 # 3. The Workaround: Fetch "naked" SBOM attachments from the registry
 _cyclonedx_sboms_by_convention := [sbom |
-    # A. Calculate the SBOM tag (sha256-<digest>.sbom)
-    image_digest := input.image.ref.digest
-    repo_url := ec.purl.parse(sprintf("pkg:oci/image?repository_url=%s", [input.image.ref.repo])).qualifiers.repository_url
-    clean_digest := replace(image_digest, "sha256:", "")
-    sbom_tag := sprintf("%s:sha256-%s.sbom", [repo_url, clean_digest])
+    # A. Parse the image string (e.g. "quay.io/...@sha256:...") into an object
+    img := image.parse(input.image.ref)
+    
+    # B. Construct the SBOM tag (sha256-<digest>.sbom)
+    # img.repo is "quay.io/ibm-asmw-release-devel/cosign_testing"
+    # img.digest is "sha256:22dd..."
+    clean_digest := replace(img.digest, "sha256:", "")
+    sbom_tag := sprintf("%s:sha256-%s.sbom", [img.repo, clean_digest])
 
-    # B. Fetch it directly (Bypassing ec's input.json)
+    # C. Fetch it directly
     blob := ec.oci.blob(sbom_tag)
     
-    # C. Decode and verify it's CycloneDX
+    # D. Decode and verify it's CycloneDX
     sbom := json.unmarshal(blob)
     sbom.bomFormat == "CycloneDX"
 ]
