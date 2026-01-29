@@ -13,7 +13,7 @@ import rego.v1
 all_sboms := array.concat(cyclonedx_sboms, spdx_sboms)
 
 _standard_cyclonedx_sboms := array.concat(_cyclonedx_sboms_from_attestations, _cyclonedx_sboms_from_oci)
-cyclonedx_sboms := array.concat(_standard_cyclonedx_sboms, _cyclonedx_sboms_from_content_inspection)
+cyclonedx_sboms := array.concat(_standard_cyclonedx_sboms, _cyclonedx_sboms_from_raw_conent)
 _cyclonedx_sboms_from_attestations := [statement.predicate |
 	some att in input.attestations
 	statement := att.statement
@@ -28,15 +28,9 @@ _cyclonedx_sboms_from_oci := [sbom |
 ]
 
 # [TEMPORARY] Workaround check: ignores predicateType, inspects payload content
-_cyclonedx_sboms_from_content_inspection := [statement.predicate |
+_cyclonedx_sboms_from_raw_conent := [att.statement |
     some att in input.attestations
-    statement := att.statement
-    
-    # Avoid duplicates: only look at things NOT already caught by the standard check
-    statement.predicateType != "https://cyclonedx.org/bom"
-    
-    # Duck Typing: If it quacks like CycloneDX, it is CycloneDX
-    statement.predicate.bomFormat == "CycloneDX"
+    att.statement.bomFormat == "CycloneDX"
 ]
 
 spdx_sboms := array.concat(_spdx_sboms_from_attestations, _spdx_sboms_from_oci)
