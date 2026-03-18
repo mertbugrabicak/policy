@@ -8,7 +8,7 @@ import data.sbom_spdx
 
 test_all_good if {
 	lib.assert_empty(sbom_spdx.deny) with input.attestations as [_sbom_attestation]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 }
 
 test_all_good_marshaled if {
@@ -18,7 +18,7 @@ test_all_good_marshaled if {
 		"value": json.marshal(_sbom_attestation.statement.predicate),
 	}])
 	lib.assert_empty(sbom_spdx.deny) with input.attestations as [att]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 }
 
 test_missing_packages if {
@@ -29,7 +29,7 @@ test_missing_packages if {
 		"value": [],
 	}])
 	lib.assert_equal_results(expected, sbom_spdx.deny) with input.attestations as [att]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 }
 
 test_missing_files if {
@@ -40,16 +40,17 @@ test_missing_files if {
 		"value": [],
 	}])
 	lib.assert_equal_results(expected, sbom_spdx.deny) with input.attestations as [att]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 }
 
 test_digest_mismatch if {
 	expected := {{
 		"code": "sbom_spdx.matches_image",
-		"msg": "Image digest in the SBOM, \"sha256:123\", is not as expected, \"sha256:abc\"",
+		# regal ignore:line-length
+		"msg": "Image digest in the SBOM, \"sha256:1230000000000000000000000000000000000000000000000000000000000123\", is not as expected, \"sha256:abc0000000000000000000000000000000000000000000000000000000000abc\"",
 	}}
 	lib.assert_equal_results(expected, sbom_spdx.deny) with input.attestations as [_sbom_attestation]
-		with input.image.ref as "registry.local/spam@sha256:abc"
+		with input.image.ref as "registry.local/spam@sha256:abc0000000000000000000000000000000000000000000000000000000000abc"
 }
 
 test_not_valid if {
@@ -97,7 +98,8 @@ assert_allowed(purl, disallowed_packages) if {
 
 	# regal ignore:with-outside-test-context
 	lib.assert_empty(sbom_spdx.deny) with input.attestations as [att]
-		with data.rule_data.disallowed_packages as disallowed_packages
+		# regal ignore:with-outside-test-context
+with 		data.rule_data.disallowed_packages as disallowed_packages
 }
 
 assert_not_allowed(purl, disallowed_packages) if {
@@ -113,13 +115,14 @@ assert_not_allowed(purl, disallowed_packages) if {
 
 	# regal ignore:with-outside-test-context
 	lib.assert_equal_results(sbom_spdx.deny, expected) with input.attestations as [att]
-		with data.rule_data.disallowed_packages as disallowed_packages
+		# regal ignore:with-outside-test-context
+with 		data.rule_data.disallowed_packages as disallowed_packages
 }
 
 test_external_references_allowed_regex_with_no_rules_is_allowed if {
 	expected := {}
 	lib.assert_equal_results(expected, sbom_spdx.deny) with input.attestations as [_sbom_attestation]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 		with data.rule_data as {sbom.rule_data_allowed_external_references_key: []}
 }
 
@@ -131,7 +134,7 @@ test_external_references_allowed_regex if {
 	}}
 
 	lib.assert_equal_results(expected, sbom_spdx.deny) with input.attestations as [_sbom_attestation]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 		with data.rule_data as {sbom.rule_data_allowed_external_references_key: [{
 			"type": "purl",
 			"url": ".*allowed.net.*",
@@ -146,7 +149,7 @@ test_external_references_disallowed_regex if {
 	}}
 
 	lib.assert_equal_results(expected, sbom_spdx.deny) with input.attestations as [_sbom_attestation]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 		with data.rule_data as {sbom.rule_data_disallowed_external_references_key: [{
 			"type": "purl",
 			"url": ".*kernel-module-management-rhel9-operator.*",
@@ -251,7 +254,7 @@ test_attributes_not_allowed_pair if {
 	}}
 
 	lib.assert_equal_results(expected, sbom_spdx.deny) with input.attestations as [_sbom_attestation]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 		with data.rule_data as {sbom.rule_data_attributes_key: [{"name": "attr1"}]}
 }
 
@@ -265,7 +268,7 @@ test_attributes_not_allowed_value if {
 	}}
 
 	lib.assert_equal_results(expected, sbom_spdx.deny) with input.attestations as [_sbom_attestation]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 		with data.rule_data as {sbom.rule_data_attributes_key: [{"name": "attr2", "value": "value2"}]}
 }
 
@@ -290,7 +293,7 @@ test_attributes_not_allowed_effective_on if {
 	}
 
 	raw_results := sbom_spdx.deny with input.attestations as [_sbom_attestation]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 		with data.rule_data as {sbom.rule_data_attributes_key: [
 			{"name": "attr1", "effective_on": "2025-01-01T00:00:00Z"},
 			{"name": "attr2", "value": "value2"},
@@ -331,7 +334,7 @@ test_attributes_multiple_external_refs if {
 	}
 
 	lib.assert_equal_results(expected, sbom_spdx.deny) with input.attestations as [_sbom]
-		with input.image.ref as "registry.local/spam@sha256:123"
+		with input.image.ref as "registry.local/spam@sha256:1230000000000000000000000000000000000000000000000000000000000123"
 		with data.rule_data as {sbom.rule_data_attributes_key: [{"name": "attr2", "value": "value2"}]}
 }
 
@@ -342,7 +345,7 @@ _sbom_attestation := {"statement": {
 		"documentNamespace": "https://example.dev/spdxdocs/example-310683af-e9a0-4f66-a6a4-119352915b51",
 		"dataLicense": "CC0-1.0",
 		"SPDXID": "SPDXRef-DOCUMENT",
-		"name": "registry.local/bacon@sha256:123",
+		"name": "registry.local/bacon@sha256:1230000000000000000000000000000000000000000000000000000000000123",
 		"creationInfo": {
 			"created": "2006-08-14T02:34:56-06:00",
 			"creators": ["Tool: example SPDX document only"],

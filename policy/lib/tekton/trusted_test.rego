@@ -22,6 +22,15 @@ import data.lib.time as time_lib
 #
 # #############################################################################
 
+# Helper to create a mock bundle_manifests map for testing
+# bundle_ref: the bundle reference (e.g., "registry.local/trusty:1.0@sha256:digest")
+# version: the version annotation value (e.g., "1.0")
+# regal ignore:line-length
+_mock_bundle_manifests(bundle_ref, version) := {bundle_ref: {"annotations": {"org.opencontainers.image.version": version}}}
+
+# Empty bundle_manifests for tests that don't need version checking
+_empty_bundle_manifests := {}
+
 # =============================================================================
 # SHARED HELPERS TESTS
 # =============================================================================
@@ -151,7 +160,8 @@ test_untrusted_task_refs if {
 
 	expected := {untrusted_bundle_task, expired_trusted_bundle_task, untrusted_git_task, expired_trusted_git_task}
 
-	lib.assert_equal(expected, tekton.untrusted_task_refs(tasks)) with data.trusted_tasks as trusted_tasks
+	# regal ignore:line-length
+	lib.assert_equal(expected, tekton.untrusted_task_refs(tasks, _empty_bundle_manifests)) with data.trusted_tasks as trusted_tasks
 }
 
 # Test untrusted_task_refs routing to rules system when trusted_task_rules data is present
@@ -167,17 +177,20 @@ test_untrusted_task_refs_routes_to_rules if {
 	# untrusted_bundle_task should be untrusted (doesn't match allow pattern)
 	expected := {untrusted_bundle_task}
 
-	lib.assert_equal(expected, tekton.untrusted_task_refs(tasks)) with data.rule_data.trusted_task_rules as task_rules
+	# regal ignore:line-length
+	lib.assert_equal(expected, tekton.untrusted_task_refs(tasks, _empty_bundle_manifests)) with data.rule_data.trusted_task_rules as task_rules
 }
 
 test_is_trusted_task if {
-	tekton.is_trusted_task(trusted_bundle_task) with data.trusted_tasks as trusted_tasks
-	tekton.is_trusted_task(trusted_git_task) with data.trusted_tasks as trusted_tasks
+	tekton.is_trusted_task(trusted_bundle_task, _empty_bundle_manifests) with data.trusted_tasks as trusted_tasks
+	tekton.is_trusted_task(trusted_git_task, _empty_bundle_manifests) with data.trusted_tasks as trusted_tasks
 
-	not tekton.is_trusted_task(untrusted_bundle_task) with data.trusted_tasks as trusted_tasks
-	not tekton.is_trusted_task(untrusted_git_task) with data.trusted_tasks as trusted_tasks
-	not tekton.is_trusted_task(expired_trusted_git_task) with data.trusted_tasks as trusted_tasks
-	not tekton.is_trusted_task(expired_trusted_bundle_task) with data.trusted_tasks as trusted_tasks
+	not tekton.is_trusted_task(untrusted_bundle_task, _empty_bundle_manifests) with data.trusted_tasks as trusted_tasks
+	not tekton.is_trusted_task(untrusted_git_task, _empty_bundle_manifests) with data.trusted_tasks as trusted_tasks
+	not tekton.is_trusted_task(expired_trusted_git_task, _empty_bundle_manifests) with data.trusted_tasks as trusted_tasks
+
+	# regal ignore:line-length
+	not tekton.is_trusted_task(expired_trusted_bundle_task, _empty_bundle_manifests) with data.trusted_tasks as trusted_tasks
 }
 
 # =============================================================================
@@ -218,97 +231,137 @@ test_is_trusted_task_with_rules if {
 
 	# Task that matches allow rule should be trusted
 	allowed_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-something:0.4@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-something:0.4@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "task-something"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	tekton.is_trusted_task(allowed_task) with data.rule_data.trusted_task_rules as trusted_task_rules
-		with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "0.4"}}
+	allowed_task_manifests := _mock_bundle_manifests(
+		"quay.io/konflux-ci/tekton-catalog/task-something:0.4@sha256:digest",
+		"0.4",
+	)
+
+	# regal ignore:line-length
+	tekton.is_trusted_task(allowed_task, allowed_task_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 
 	# Task that matches deny rule should not be trusted (deny takes precedence)
 	denied_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.3@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.3@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "task-buildah"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	not tekton.is_trusted_task(denied_task) with data.rule_data.trusted_task_rules as trusted_task_rules
-		with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "0.3"}}
+	denied_task_manifests := _mock_bundle_manifests(
+		"quay.io/konflux-ci/tekton-catalog/task-buildah:0.3@sha256:digest",
+		"0.3",
+	)
+
+	# regal ignore:line-length
+	not tekton.is_trusted_task(denied_task, denied_task_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 
 	# Task that matches allow pattern (registry.local) should be trusted
 	# Note: The key format is oci://registry.local/trusty:1.0 (with tag), so pattern oci://registry.local/* matches
 	registry_local_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "trusty"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	tekton.is_trusted_task(registry_local_task) with data.rule_data.trusted_task_rules as trusted_task_rules
-		with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "1.0"}}
+	registry_local_manifests := _mock_bundle_manifests("registry.local/trusty:1.0@sha256:digest", "1.0")
+
+	# regal ignore:line-length
+	tekton.is_trusted_task(registry_local_task, registry_local_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 
 	# Task that doesn't match any allow rule should not be trusted
 	# Note: This task uses a different path (untrusted) that doesn't match the pattern
 	not_allowed_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "other-registry.io/untrusted:1.0@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "other-registry.io/untrusted:1.0@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "untrusted"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	not tekton.is_trusted_task(not_allowed_task) with data.rule_data.trusted_task_rules as trusted_task_rules
-		with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "1.0"}}
+	not_allowed_manifests := _mock_bundle_manifests("other-registry.io/untrusted:1.0@sha256:digest", "1.0")
+
+	# regal ignore:line-length
+	not tekton.is_trusted_task(not_allowed_task, not_allowed_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 
 	# Tasks satisfying at least one deny rule version constraints should be denied
 	deny_constrained_task_denied_version := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/deny-task-constrained:1.5@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/deny-task-constrained:1.5@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "constrained"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	not tekton.is_trusted_task(deny_constrained_task_denied_version) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
-		with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "1.5"}}
+
+	# regal ignore:line-length
+	deny_constrained_denied_manifests := _mock_bundle_manifests("quay.io/konflux-ci/tekton-catalog/deny-task-constrained:1.5@sha256:digest", "1.5")
+
+	# regal ignore:line-length
+	not tekton.is_trusted_task(deny_constrained_task_denied_version, deny_constrained_denied_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 
 	# Task not satisfying any deny rule version constraints should not be denied
 	deny_constrained_task_valid_version := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/deny-task-constrained:1.2.3@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/deny-task-constrained:1.2.3@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "constrained"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	tekton.is_trusted_task(deny_constrained_task_valid_version) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
-		with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "1.2.3"}}
+
+	# regal ignore:line-length
+	deny_constrained_valid_manifests := _mock_bundle_manifests("quay.io/konflux-ci/tekton-catalog/deny-task-constrained:1.2.3@sha256:digest", "1.2.3")
+	tekton.is_trusted_task(deny_constrained_task_valid_version, deny_constrained_valid_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
 
 	# Tasks satisfying all the allow-rule version constraints should be allowed
 	allow_constrained_task_valid_version := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/another-catalog/allow-task-constrained:1.5@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/another-catalog/allow-task-constrained:1.5@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "constrained"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	tekton.is_trusted_task(allow_constrained_task_valid_version) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
-		with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "1.5"}}
+
+	# regal ignore:line-length
+	allow_constrained_valid_manifests := _mock_bundle_manifests("quay.io/konflux-ci/another-catalog/allow-task-constrained:1.5@sha256:digest", "1.5")
+	tekton.is_trusted_task(allow_constrained_task_valid_version, allow_constrained_valid_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
 
 	# Tasks *NOT* satisfying all the allow-rule version constraints should be denied
 	allow_constrained_task_denied_version := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/another-catalog/allow-task-constrained:1.2.3@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/another-catalog/allow-task-constrained:1.2.3@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "constrained"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	not tekton.is_trusted_task(allow_constrained_task_denied_version) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
-		with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "1.2.3"}}
+
+	# regal ignore:line-length
+	allow_constrained_denied_manifests := _mock_bundle_manifests("quay.io/konflux-ci/another-catalog/allow-task-constrained:1.2.3@sha256:digest", "1.2.3")
+	not tekton.is_trusted_task(allow_constrained_task_denied_version, allow_constrained_denied_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
 
 	# Task with mismatching versions between ref and manifest annotations.
 	# Only the manifest annotation is taken into consideration
 	allow_constrained_task_denied_version_mismatching_1 := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/another-catalog/allow-task-constrained:1.5@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/another-catalog/allow-task-constrained:1.5@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "constrained"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	not tekton.is_trusted_task(allow_constrained_task_denied_version_mismatching_1) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
-		with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "1.2.3"}}
+
+	# Manifest has 1.2.3 even though ref has 1.5 - manifest version is used
+	# regal ignore:line-length
+	mismatch_manifests_1 := _mock_bundle_manifests("quay.io/konflux-ci/another-catalog/allow-task-constrained:1.5@sha256:digest", "1.2.3")
+	not tekton.is_trusted_task(allow_constrained_task_denied_version_mismatching_1, mismatch_manifests_1) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
 
 	# Task with mismatching versions between ref and manifest annotations.
 	# Only the manifest annotation is taken into consideration
 	allow_constrained_task_denied_version_mismatching_2 := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/another-catalog/allow-task-constrained:1.2.3@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/another-catalog/allow-task-constrained:1.2.3@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "constrained"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	tekton.is_trusted_task(allow_constrained_task_denied_version_mismatching_2) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
-		with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "1.5"}}
+
+	# Manifest has 1.5 even though ref has 1.2.3 - manifest version is used
+	# regal ignore:line-length
+	mismatch_manifests_2 := _mock_bundle_manifests("quay.io/konflux-ci/another-catalog/allow-task-constrained:1.2.3@sha256:digest", "1.5")
+	tekton.is_trusted_task(allow_constrained_task_denied_version_mismatching_2, mismatch_manifests_2) with data.rule_data.trusted_task_rules as trusted_task_rules # regal ignore:line-length
 }
 
 test_trusted_task_records if {
@@ -328,10 +381,10 @@ test_trusted_task_records if {
 
 test_unexpired_records if {
 	expected_refs_by_index := {
-		0: "sha256:latest",
-		1: "sha256:digest-1",
-		2: "sha256:digest-2",
-		3: "sha256:oldest",
+		0: "sha256:1a7e5700000000000000000000000000000000000000000000000000001a7e57",
+		1: "sha256:d19e5710000000000000000000000000000000000000000000000000d19e5710",
+		2: "sha256:d19e5720000000000000000000000000000000000000000000000000d19e5720",
+		3: "sha256:01de5700000000000000000000000000000000000000000000000000001de570",
 	}
 
 	# regal ignore:line-length
@@ -358,11 +411,12 @@ test_data_trusted_task_rules_extraction if {
 
 	# Task matching allow from data.trusted_task_rules should be trusted
 	allowed_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "trusty"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	tekton.is_trusted_task(allowed_task) with data.trusted_task_rules as data_rules_allow
+	tekton.is_trusted_task(allowed_task, _empty_bundle_manifests) with data.trusted_task_rules as data_rules_allow
 		with data.rule_data.trusted_task_rules as null
 
 	# Test when data.trusted_task_rules is provided with deny rules
@@ -373,16 +427,17 @@ test_data_trusted_task_rules_extraction if {
 
 	# Task matching deny from data.trusted_task_rules should not be trusted
 	denied_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "registry.local/crook:1.0@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "registry.local/crook:1.0@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "crook"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	not tekton.is_trusted_task(denied_task) with data.trusted_task_rules as data_rules_deny
+	not tekton.is_trusted_task(denied_task, _empty_bundle_manifests) with data.trusted_task_rules as data_rules_deny
 		with data.rule_data.trusted_task_rules as null
 
 	# Test when data.trusted_task_rules is not provided (covers default cases 145, 152)
 	# Should fall back to empty arrays, so task won't be trusted via rules
-	not tekton.is_trusted_task(allowed_task) with data.trusted_task_rules as null
+	not tekton.is_trusted_task(allowed_task, _empty_bundle_manifests) with data.trusted_task_rules as null
 		with data.rule_data.trusted_task_rules as null
 }
 
@@ -402,23 +457,27 @@ test_rule_data_trusted_task_rules_extraction if {
 
 	# Task matching allow from rule_data should be trusted
 	allowed_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-something:0.4@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-something:0.4@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "task-something"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	tekton.is_trusted_task(allowed_task) with data.rule_data.trusted_task_rules as rule_data_rules
+	tekton.is_trusted_task(allowed_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as rule_data_rules
 
 	# Task matching deny from rule_data should not be trusted
 	denied_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.3@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.3@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "task-buildah"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	not tekton.is_trusted_task(denied_task) with data.rule_data.trusted_task_rules as rule_data_rules
+
+	# regal ignore:line-length
+	not tekton.is_trusted_task(denied_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as rule_data_rules
 
 	# Test when lib_rule_data returns [] (not an object) - covers default cases
 	# When rule_data returns [], it's not an object, so defaults are used
-	not tekton.is_trusted_task(allowed_task) with data.rule_data.trusted_task_rules as []
+	not tekton.is_trusted_task(allowed_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as []
 }
 
 test_data_errors if {
@@ -438,8 +497,10 @@ test_data_errors if {
 		],
 		# this is allowed
 		"duplicated-entries": [
-			{"ref": "sha256:digest", "expires_on": "2099-01-01T00:00:00Z"},
-			{"ref": "sha256:digest", "expires_on": "2099-01-01T00:00:00Z"},
+			# regal ignore:line-length
+			{"ref": "sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700", "expires_on": "2099-01-01T00:00:00Z"},
+			# regal ignore:line-length
+			{"ref": "sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700", "expires_on": "2099-01-01T00:00:00Z"},
 		],
 	}
 
@@ -500,24 +561,27 @@ test_denying_pattern if {
 
 	# Create a task that matches the deny rule
 	denied_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.3@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.3@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "task-buildah"},
 		{"name": "kind", "value": "task"},
 	]}}}
 
 	# Should return a list with the pattern that denied it
-	patterns := tekton.denying_pattern(denied_task) with data.rule_data.trusted_task_rules as trusted_task_rules
+	# regal ignore:line-length
+	patterns := tekton.denying_pattern(denied_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 	lib.assert_equal(["oci://quay.io/konflux-ci/tekton-catalog/task-buildah*"], patterns)
 
 	# Task that doesn't match any deny rule should return empty list
 	non_matching_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "trusty"},
 		{"name": "kind", "value": "task"},
 	]}}}
 
 	# regal ignore:line-length
-	patterns_empty := tekton.denying_pattern(non_matching_task) with data.rule_data.trusted_task_rules as trusted_task_rules
+	patterns_empty := tekton.denying_pattern(non_matching_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 	lib.assert_equal([], patterns_empty)
 }
 
@@ -539,11 +603,14 @@ test_denying_pattern_multiple_rules if {
 
 	# Should match both patterns (both rules match this task)
 	buildah_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.4@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.4@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "task-buildah"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	patterns_multi := tekton.denying_pattern(buildah_task) with data.rule_data.trusted_task_rules as multiple_deny_rules
+
+	# regal ignore:line-length
+	patterns_multi := tekton.denying_pattern(buildah_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as multiple_deny_rules
 
 	# Should contain both patterns (order may vary)
 	lib.assert_equal(2, count(patterns_multi))
@@ -571,39 +638,47 @@ test_denial_reason if {
 
 	# Case 1: Matches a deny rule (even though it also matches allow)
 	denied_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.3@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.3@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "task-buildah"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	reason_deny := tekton.denial_reason(denied_task) with data.rule_data.trusted_task_rules as trusted_task_rules
+
+	# regal ignore:line-length
+	reason_deny := tekton.denial_reason(denied_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 	lib.assert_equal("deny_rule", reason_deny.type)
 	lib.assert_equal(["oci://quay.io/konflux-ci/tekton-catalog/task-buildah*"], reason_deny.pattern)
 	lib.assert_equal(["This version is deprecated"], reason_deny.messages)
 
 	# Case 2: Doesn't match any allow rule and isn't in legacy
 	not_allowed_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "registry.local/untrusted:1.0@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "registry.local/untrusted:1.0@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "untrusted"},
 		{"name": "kind", "value": "task"},
 	]}}}
 
 	# regal ignore:line-length
-	reason_not_allowed := tekton.denial_reason(not_allowed_task) with data.rule_data.trusted_task_rules as trusted_task_rules
+	reason_not_allowed := tekton.denial_reason(not_allowed_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 	lib.assert_equal("not_allowed", reason_not_allowed.type)
 	lib.assert_equal([], reason_not_allowed.pattern)
 	lib.assert_equal([], reason_not_allowed.messages)
 
 	# Task that matches allow rule should return nothing (it's trusted)
 	allowed_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-something:0.4@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-something:0.4@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "task-something"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	not tekton.denial_reason(allowed_task) with data.rule_data.trusted_task_rules as trusted_task_rules
+
+	# regal ignore:line-length
+	not tekton.denial_reason(allowed_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 
 	# Task in legacy trusted_tasks but doesn't match allow rules should return "not_allowed"
 	# (denial_reason only works with trusted_task_rules, not legacy)
-	reason_legacy := tekton.denial_reason(trusted_bundle_task) with data.rule_data.trusted_task_rules as trusted_task_rules
+	# regal ignore:line-length
+	reason_legacy := tekton.denial_reason(trusted_bundle_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as trusted_task_rules
 		with data.trusted_tasks as trusted_tasks
 	lib.assert_equal("not_allowed", reason_legacy.type)
 	lib.assert_equal([], reason_legacy.pattern)
@@ -620,11 +695,14 @@ test_denial_reason_no_allow_rules if {
 	# Task not in legacy should return nothing (we fall back to legacy, which is empty, but denial_reason
 	# only applies when allow rules exist)
 	untrusted_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "registry.local/untrusted:1.0@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "registry.local/untrusted:1.0@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "untrusted"},
 		{"name": "kind", "value": "task"},
 	]}}}
-	not tekton.denial_reason(untrusted_task) with data.rule_data.trusted_task_rules as rules_no_allow
+
+	# regal ignore:line-length
+	not tekton.denial_reason(untrusted_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as rules_no_allow
 }
 
 test_trusted_task_rules_data_errors if {
@@ -714,7 +792,8 @@ test_denying_pattern_invalid_task if {
 	}
 
 	# Should return empty list (else branch) since task_ref fails
-	patterns := tekton.denying_pattern(invalid_task) with data.rule_data.trusted_task_rules as rules
+	# regal ignore:line-length
+	patterns := tekton.denying_pattern(invalid_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as rules
 	lib.assert_equal([], patterns)
 }
 
@@ -732,21 +811,24 @@ test_denying_rules_info_empty if {
 
 	# Task that matches allow rule - denial_reason should be empty
 	allowed_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.4@sha256:digest"},
+		# regal ignore:line-length
+		{"name": "bundle", "value": "quay.io/konflux-ci/tekton-catalog/task-buildah:0.4@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{"name": "name", "value": "task-buildah"},
 		{"name": "kind", "value": "task"},
 	]}}}
 
 	# denial_reason returns nothing for allowed tasks (internally calls _denying_rules_info which returns empty)
-	not tekton.denial_reason(allowed_task) with data.rule_data.trusted_task_rules as rules_no_deny
+	not tekton.denial_reason(allowed_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as rules_no_deny
 
 	# denying_pattern should also return empty list (covers line 337)
-	patterns := tekton.denying_pattern(allowed_task) with data.rule_data.trusted_task_rules as rules_no_deny
+	# regal ignore:line-length
+	patterns := tekton.denying_pattern(allowed_task, _empty_bundle_manifests) with data.rule_data.trusted_task_rules as rules_no_deny
 	lib.assert_equal([], patterns)
 }
 
 trusted_bundle_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-	{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:digest"},
+	# regal ignore:line-length
+	{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 	{"name": "name", "value": "trusty"},
 	{"name": "kind", "value": "task"},
 ]}}}
@@ -754,19 +836,22 @@ trusted_bundle_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
 newest_trusted_bundle_task := trusted_bundle_task
 
 same_date_trusted_bundle_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-	{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:same_date"},
+	# regal ignore:line-length
+	{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:5a4eda7e00000000000000000000000000000000000000000000000005a4eda7e"},
 	{"name": "name", "value": "trusty"},
 	{"name": "kind", "value": "task"},
 ]}}}
 
 outdated_trusted_bundle_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-	{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:outdated-digest"},
+	# regal ignore:line-length
+	{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:007da7edd19e5700000000000000000000000000000000007da7edd19e57"},
 	{"name": "name", "value": "trusty"},
 	{"name": "kind", "value": "task"},
 ]}}}
 
 expired_trusted_bundle_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-	{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:expired-digest"},
+	# regal ignore:line-length
+	{"name": "bundle", "value": "registry.local/trusty:1.0@sha256:e001edd19e5700000000000000000000000000000000000000e001edd19e57"},
 	{"name": "name", "value": "trusty"},
 	{"name": "kind", "value": "task"},
 ]}}}
@@ -778,7 +863,8 @@ unpinned_bundle_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
 ]}}}
 
 untrusted_bundle_task := {"spec": {"taskRef": {"resolver": "bundles", "params": [
-	{"name": "bundle", "value": "registry.local/crook:1.0@sha256:digest"},
+	# regal ignore:line-length
+	{"name": "bundle", "value": "registry.local/crook:1.0@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 	{"name": "name", "value": "crook"},
 	{"name": "kind", "value": "task"},
 ]}}}
@@ -837,17 +923,17 @@ untrusted_git_task := {
 
 trusted_tasks := {
 	"oci://registry.local/trusty:1.0": [
-		{"ref": "sha256:digest"},
+		{"ref": "sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"},
 		{
-			"ref": "sha256:same_date",
+			"ref": "sha256:5a4eda7e00000000000000000000000000000000000000000000000005a4eda7e",
 			"expires_on": "2099-01-01T00:00:00Z",
 		},
 		{
-			"ref": "sha256:outdated-digest",
+			"ref": "sha256:007da7edd19e5700000000000000000000000000000000007da7edd19e57",
 			"expires_on": "2099-01-01T00:00:00Z",
 		},
 		{
-			"ref": "sha256:expired-digest",
+			"ref": "sha256:e001edd19e5700000000000000000000000000000000000000e001edd19e57",
 			"expires_on": "2024-01-01T00:00:00Z",
 		},
 	],
@@ -866,71 +952,129 @@ trusted_tasks := {
 
 unsorted_trusted_task := {"oci://registry.local/trusty:1.0": [
 	{
-		"ref": "sha256:digest-1",
+		"ref": "sha256:d19e5710000000000000000000000000000000000000000000000000d19e5710",
 		"expires_on": "2100-01-01T00:00:00Z",
 	},
 	{
-		"ref": "sha256:digest-2",
+		"ref": "sha256:d19e5720000000000000000000000000000000000000000000000000d19e5720",
 		"expires_on": "2075-01-01T00:00:00Z",
 	},
-	{"ref": "sha256:latest"},
+	{"ref": "sha256:1a7e5700000000000000000000000000000000000000000000000000001a7e57"},
 	{
-		"ref": "sha256:oldest",
+		"ref": "sha256:01de5700000000000000000000000000000000000000000000000000001de570",
 		"expires_on": "2050-01-01T00:00:00Z",
 	},
 	{
-		"ref": "sha256:expired",
+		"ref": "sha256:e001ed00000000000000000000000000000000000000000000000000e001ed00",
 		"expires_on": "2000-01-01T00:00:00Z",
 	},
 	{
-		"ref": "sha256:invalid-expires-on",
+		"ref": "sha256:bad0da7e0000000000000000000000000000000000000000000000bad0da7e",
 		"expires_on": "bad-data",
 	},
 ]}
 
 test_version_satisfies_all_rule_constraints if {
 	# No version constraints in rule - should always pass
-	tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.2.3"}, {})
+	tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.2.3"}, {}, _empty_bundle_manifests)
 
 	# Has version constraints and valid semver
-	tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=1.1", "<3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "1.2.3"}} # regal ignore:line-length
-	tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=1.1", "<3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "1.1.0"}} # regal ignore:line-length
-	tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.1.1"}} # regal ignore:line-length
-	tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<=3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v3.0.0"}} # regal ignore:line-length
+	manifests_1_2_3 := _mock_bundle_manifests("example.com/task:1.0", "1.2.3")
+
+	# regal ignore:line-length
+	tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=1.1", "<3"]}, manifests_1_2_3)
+	manifests_1_1_0 := _mock_bundle_manifests("example.com/task:1.0", "1.1.0")
+
+	# regal ignore:line-length
+	tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=1.1", "<3"]}, manifests_1_1_0)
+	manifests_1_1_1 := _mock_bundle_manifests("example.com/task:1.0", "v1.1.1")
+
+	# regal ignore:line-length
+	tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}, manifests_1_1_1)
+	manifests_3_0_0 := _mock_bundle_manifests("example.com/task:1.0", "v3.0.0")
+
+	# regal ignore:line-length
+	tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<=3"]}, manifests_3_0_0)
 
 	# Version doesn't match all the constraints
-	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.5.0"}} # regal ignore:line-length
-	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.1.0"}} # regal ignore:line-length
-	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v3.0.0"}} # regal ignore:line-length
-	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": ["<2", ">=1.5.1"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.5.0"}} # regal ignore:line-length
+	manifests_1_5_0 := _mock_bundle_manifests("example.com/task:1.0", "v1.5.0")
+
+	# regal ignore:line-length
+	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}, manifests_1_5_0)
+	manifests_v1_1_0 := _mock_bundle_manifests("example.com/task:1.0", "v1.1.0")
+
+	# regal ignore:line-length
+	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}, manifests_v1_1_0)
+	manifests_v3_0_0 := _mock_bundle_manifests("example.com/task:1.0", "v3.0.0")
+
+	# regal ignore:line-length
+	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}, manifests_v3_0_0)
+
+	# regal ignore:line-length
+	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": ["<2", ">=1.5.1"]}, manifests_1_5_0)
 
 	# Invalid inputs - should fail
-	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}) with ec.oci.image_manifest as {"annotations": {}} # regal ignore:line-length
-	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "invalid"}} # regal ignore:line-length
+	manifests_empty := {"example.com/task:1.0": {"annotations": {}}}
+
+	# regal ignore:line-length
+	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}, manifests_empty)
+	manifests_invalid := _mock_bundle_manifests("example.com/task:1.0", "invalid")
+
+	# regal ignore:line-length
+	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}, manifests_invalid)
 }
 
 test_version_satisfies_any_rule_constraints if {
 	# No version constraints in rule - should always pass
-	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.2.3"}, {})
+	# regal ignore:line-length
+	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.2.3"}, {}, _empty_bundle_manifests)
 
 	# Has version constraints and valid semver
-	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=1.1", "<3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.2.3"}} # regal ignore:line-length
-	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=1.1", "<3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.1.0"}} # regal ignore:line-length
-	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.1.1"}} # regal ignore:line-length
-	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<=3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v3.0.0"}} # regal ignore:line-length
+	manifests_v1_2_3 := _mock_bundle_manifests("example.com/task:1.0", "v1.2.3")
+
+	# regal ignore:line-length
+	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=1.1", "<3"]}, manifests_v1_2_3)
+	manifests_v1_1_0 := _mock_bundle_manifests("example.com/task:1.0", "v1.1.0")
+
+	# regal ignore:line-length
+	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=1.1", "<3"]}, manifests_v1_1_0)
+	manifests_v1_1_1 := _mock_bundle_manifests("example.com/task:1.0", "v1.1.1")
+
+	# regal ignore:line-length
+	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}, manifests_v1_1_1)
+	manifests_v3_0_0 := _mock_bundle_manifests("example.com/task:1.0", "v3.0.0")
+
+	# regal ignore:line-length
+	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<=3"]}, manifests_v3_0_0)
 
 	# Version doesn't match all the constraints, but still passes
-	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.1.0"}} # regal ignore:line-length
-	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v3.0.0"}} # regal ignore:line-length
+	# regal ignore:line-length
+	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}, manifests_v1_1_0)
+
+	# regal ignore:line-length
+	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">1.1", "<3"]}, manifests_v3_0_0)
 
 	# Version doesn't match any constraint
-	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.5.0"}} # regal ignore:line-length
-	not tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": ["<1", ">=1.5.1"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.5.0"}} # regal ignore:line-length
+	manifests_v1_5_0 := _mock_bundle_manifests("example.com/task:1.0", "v1.5.0")
+
+	# regal ignore:line-length
+	not tekton._version_satisfies_all_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}, manifests_v1_5_0)
+
+	# regal ignore:line-length
+	not tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": ["<1", ">=1.5.1"]}, manifests_v1_5_0)
 
 	# Missing or invalid version annotation - should return true (deny by default for security)
-	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}) with ec.oci.image_manifest as {"annotations": {}} # regal ignore:line-length
-	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "invalid"}} # regal ignore:line-length
-	not tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": ["<1", ">=1.5.1"]}) with ec.oci.image_manifest as {"annotations": {"org.opencontainers.image.version": "v1.5.0"}} # regal ignore:line-length
+	manifests_empty := {"example.com/task:1.0": {"annotations": {}}}
+
+	# regal ignore:line-length
+	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}, manifests_empty)
+	manifests_invalid := _mock_bundle_manifests("example.com/task:1.0", "invalid")
+
+	# regal ignore:line-length
+	tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": [">=2"]}, manifests_invalid)
+
+	# regal ignore:line-length
+	not tekton._version_satisfies_any_rule_constraints({"bundle": "example.com/task:1.0"}, {"versions": ["<1", ">=1.5.1"]}, manifests_v1_5_0)
 }
 
 test_normalize_version if {

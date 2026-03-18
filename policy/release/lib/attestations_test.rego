@@ -38,7 +38,7 @@ garbage_att := {"statement": {
 	"predicate": {"buildType": "garbage"},
 }}
 
-trusted_bundle_ref := "registry.img/acceptable@sha256:digest"
+trusted_bundle_ref := "registry.img/acceptable@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700"
 
 # This is used through the tests to generate an attestation of a PipelineRun
 # with an inline Task definition, look at using att_mock_helper_ref to generate
@@ -272,7 +272,7 @@ test_att_mock_helper_ref if {
 				"ref": {
 					"name": "mytask",
 					"kind": "Task",
-					"bundle": "registry.img/name:tag@sha256:digest",
+					"bundle": "registry.img/name:tag@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700",
 				},
 				"results": [{
 					"name": "result-name",
@@ -286,7 +286,7 @@ test_att_mock_helper_ref if {
 		"result-name",
 		{"foo": "bar"},
 		"mytask",
-		"registry.img/name:tag@sha256:digest",
+		"registry.img/name:tag@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700",
 	))
 }
 
@@ -296,7 +296,7 @@ test_results_from_tests if {
 	expected := {
 		"value": {"result": "SUCCESS", "foo": "bar"},
 		"name": "mytask",
-		"bundle": "registry.img/acceptable@sha256:digest",
+		"bundle": "registry.img/acceptable@sha256:d19e5700000000000000000000000000000000000000000000000000d19e5700",
 	}
 
 	att1 := att_mock_helper_ref(
@@ -354,13 +354,38 @@ test_result_values if {
 	not lib.result_values(123)
 }
 
+test_attestation_materials if {
+	# SLSA v0.2: materials are just the mock materials
+	att_v02 := _attestation_v02_with_metadata("2025-01-15T10:30:00Z", [_build_task])
+	materials_v02 := lib.attestation_materials(att_v02)
+	lib.assert_equal(materials_v02, _mock_materials)
+
+	# SLSA v1.0: resolvedDependencies includes both task dependencies and materials
+	att_v1 := _attestation_v1_with_metadata("2025-01-20T15:45:00Z", [_build_task])
+	materials_v1 := lib.attestation_materials(att_v1)
+	expected_v1 := array.concat(tekton_test.resolved_dependencies([_build_task]), _mock_materials)
+	lib.assert_equal(materials_v1, expected_v1)
+}
+
+# Mock materials for attestations (usable for both v0.2 and v1.0)
+_mock_materials := [
+	{
+		"digest": {"sha256": "abc1230000000000000000000000000000000000000000000000000000abc123"},
+		"uri": "oci://registry.img/spam",
+	},
+	{
+		"digest": {"sha1": "def456"},
+		"uri": "git+https://example.com/repo.git",
+	},
+]
+
 # Helper to create a build task (has IMAGE_URL and IMAGE_DIGEST)
 _build_task := {
 	"name": "buildah",
 	"ref": {"kind": "Task", "name": "buildah", "bundle": trusted_bundle_ref},
 	"results": [
 		{"name": "IMAGE_URL", "value": "quay.io/test/image:tag"},
-		{"name": "IMAGE_DIGEST", "value": "sha256:abc123"},
+		{"name": "IMAGE_DIGEST", "value": "sha256:abc1230000000000000000000000000000000000000000000000000000abc123"},
 	],
 }
 
@@ -380,6 +405,7 @@ _attestation_v02_with_metadata(build_finished_on, tasks) := {"statement": {
 	"predicate": {
 		"buildType": lib.tekton_pipeline_run,
 		"buildConfig": {"tasks": tasks},
+		"materials": _mock_materials,
 		"metadata": {
 			"buildFinishedOn": build_finished_on,
 			"buildStartedOn": "2025-01-01T00:00:00Z",
@@ -394,7 +420,7 @@ _attestation_v1_with_metadata(build_finished_on, tasks) := {"statement": {
 		"buildDefinition": {
 			"buildType": lib.tekton_slsav1_pipeline_run,
 			"externalParameters": {"runSpec": {"pipelineSpec": {}}},
-			"resolvedDependencies": tekton_test.resolved_dependencies(tasks),
+			"resolvedDependencies": array.concat(tekton_test.resolved_dependencies(tasks), _mock_materials),
 		},
 		"runDetails": {"metadata": {
 			"buildFinishedOn": build_finished_on,
@@ -457,7 +483,8 @@ test_pipelinerun_attestations_multiple_v1_missing_timestamp if {
 		_task_base,
 		[
 			{"name": "IMAGE_URL", "type": "string", "value": "quay.io/test/image:tag"},
-			{"name": "IMAGE_DIGEST", "type": "string", "value": "sha256:abc123"},
+			# regal ignore:line-length
+			{"name": "IMAGE_DIGEST", "type": "string", "value": "sha256:abc1230000000000000000000000000000000000000000000000000000abc123"},
 		],
 	)
 	v1_task := tekton_test.with_bundle(_task_w_results, trusted_bundle_ref)
@@ -479,7 +506,8 @@ test_pipelinerun_attestations_mixed_formats if {
 		_task_base,
 		[
 			{"name": "IMAGE_URL", "type": "string", "value": "quay.io/test/image:tag"},
-			{"name": "IMAGE_DIGEST", "type": "string", "value": "sha256:abc123"},
+			# regal ignore:line-length
+			{"name": "IMAGE_DIGEST", "type": "string", "value": "sha256:abc1230000000000000000000000000000000000000000000000000000abc123"},
 		],
 	)
 	v1_task := tekton_test.with_bundle(
@@ -535,7 +563,8 @@ test_pipelinerun_attestations_v1_single_no_timestamp if {
 		_task_base,
 		[
 			{"name": "IMAGE_URL", "type": "string", "value": "quay.io/test/image:tag"},
-			{"name": "IMAGE_DIGEST", "type": "string", "value": "sha256:abc123"},
+			# regal ignore:line-length
+			{"name": "IMAGE_DIGEST", "type": "string", "value": "sha256:abc1230000000000000000000000000000000000000000000000000000abc123"},
 		],
 	)
 	v1_task := tekton_test.with_bundle(_task_w_results, trusted_bundle_ref)

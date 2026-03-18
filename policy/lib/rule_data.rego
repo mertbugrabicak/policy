@@ -8,10 +8,13 @@ import rego.v1
 rule_data_defaults := {
 	#
 	# Used in release/attestation_type
-	"known_attestation_types": ["https://in-toto.io/Statement/v0.1"],
+	"known_attestation_types": [
+		"https://in-toto.io/Statement/v0.1",
+		"https://in-toto.io/Statement/v1",
+	],
 	#
 	# Used in release/slsa_provenance_available
-	"allowed_predicate_types": ["https://slsa.dev/provenance/v0.2"],
+	"allowed_predicate_types": ["https://slsa.dev/provenance/v0.2", "https://slsa.dev/provenance/v1"],
 	#
 	# Used in release/slsa_build_build_service
 	"allowed_builder_ids": ["https://tekton.dev/chains/v2"],
@@ -132,6 +135,9 @@ rule_data_defaults := {
 	"trusted_tasks": {},
 	# Number of days before a version of the Task expires that warnings are reported
 	"task_expiry_warning_days": 0,
+	# Number of days before a volatile config rule expires that warnings are reported
+	# Used in release/volatile_config
+	"volatile_config_warning_threshold_days": 30,
 	# The gpg-pubkey RPM does not abide to the rule of a single RPM name being installed.
 	"non_unique_rpm_names": ["gpg-pubkey"],
 }

@@ -43,7 +43,10 @@ Rules included:
 * xref:packages/release_cve.adoc#cve__rule_data_provided[CVE checks: Rule data provided]        
 * xref:packages/release_provenance_materials.adoc#provenance_materials__git_clone_source_matches_provenance[Provenance Materials: Git clone source matches materials provenance]        
 * xref:packages/release_provenance_materials.adoc#provenance_materials__git_clone_task_found[Provenance Materials: Git clone task found]        
-* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid[SBOM CycloneDX: Valid]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__cdx_supported_version[SBOM CycloneDX: Supported Version]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid_cdx_1_4[SBOM CycloneDX: Valid 1.4]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid_cdx_1_5[SBOM CycloneDX: Valid 1.5]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid_cdx_1_6[SBOM CycloneDX: Valid 1.6]        
 * xref:packages/release_sbom.adoc#sbom__found[SBOM: Found]        
 * xref:packages/release_slsa_provenance_available.adoc#slsa_provenance_available__allowed_predicate_types_provided[SLSA - Provenance - Available: Allowed predicate types provided]        
 * xref:packages/release_slsa_provenance_available.adoc#slsa_provenance_available__attestation_predicate_type_accepted[SLSA - Provenance - Available: Expected attestation predicate type found]        
@@ -56,7 +59,12 @@ Rules included:
 * xref:packages/release_slsa_source_correlated.adoc#slsa_source_correlated__attested_source_code_reference[SLSA - Verification model - Source: Source reference]        
 * xref:packages/release_sbom_spdx.adoc#sbom_spdx__valid[SPDX SBOM: Valid]        
 * xref:packages/release_tasks.adoc#tasks__pipeline_has_tasks[Tasks: Pipeline run includes at least one task]        
-* xref:packages/release_tasks.adoc#tasks__successful_pipeline_tasks[Tasks: Successful pipeline tasks]
+* xref:packages/release_tasks.adoc#tasks__successful_pipeline_tasks[Tasks: Successful pipeline tasks]        
+* xref:packages/release_volatile_config.adoc#volatile_config__expiring_rule[Volatile Configuration Warnings: Volatile rule expiring soon]        
+* xref:packages/release_volatile_config.adoc#volatile_config__expired_rule[Volatile Configuration Warnings: Volatile rule has expired]        
+* xref:packages/release_volatile_config.adoc#volatile_config__invalid_config[Volatile Configuration Warnings: Volatile rule has invalid configuration]        
+* xref:packages/release_volatile_config.adoc#volatile_config__no_expiration[Volatile Configuration Warnings: Volatile rule has no expiration]        
+* xref:packages/release_volatile_config.adoc#volatile_config__pending_rule[Volatile Configuration Warnings: Volatile rule pending activation]
 
 | [#policy_data]`policy_data`
 a| Include policy rules responsible for validating rule data.
@@ -155,7 +163,10 @@ Rules included:
 * xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__allowed_package_sources[SBOM CycloneDX: Allowed package sources]        
 * xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__disallowed_package_attributes[SBOM CycloneDX: Disallowed package attributes]        
 * xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__disallowed_package_external_references[SBOM CycloneDX: Disallowed package external references]        
-* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid[SBOM CycloneDX: Valid]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__cdx_supported_version[SBOM CycloneDX: Supported Version]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid_cdx_1_4[SBOM CycloneDX: Valid 1.4]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid_cdx_1_5[SBOM CycloneDX: Valid 1.5]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid_cdx_1_6[SBOM CycloneDX: Valid 1.6]        
 * xref:packages/release_sbom.adoc#sbom__disallowed_packages_provided[SBOM: Disallowed packages list is provided]        
 * xref:packages/release_sbom.adoc#sbom__found[SBOM: Found]        
 * xref:packages/release_slsa_build_build_service.adoc#slsa_build_build_service__allowed_builder_ids_provided[SLSA - Build - Build Service: Allowed builder IDs provided]        
@@ -214,6 +225,11 @@ Rules included:
 * xref:packages/release_trusted_task.adoc#trusted_task__current[Trusted Task checks: Tasks using the latest versions]        
 * xref:packages/release_trusted_task.adoc#trusted_task__valid_trusted_artifact_inputs[Trusted Task checks: Trusted Artifact produced in pipeline]        
 * xref:packages/release_trusted_task.adoc#trusted_task__trusted_parameters[Trusted Task checks: Trusted parameters]        
+* xref:packages/release_volatile_config.adoc#volatile_config__expiring_rule[Volatile Configuration Warnings: Volatile rule expiring soon]        
+* xref:packages/release_volatile_config.adoc#volatile_config__expired_rule[Volatile Configuration Warnings: Volatile rule has expired]        
+* xref:packages/release_volatile_config.adoc#volatile_config__invalid_config[Volatile Configuration Warnings: Volatile rule has invalid configuration]        
+* xref:packages/release_volatile_config.adoc#volatile_config__no_expiration[Volatile Configuration Warnings: Volatile rule has no expiration]        
+* xref:packages/release_volatile_config.adoc#volatile_config__pending_rule[Volatile Configuration Warnings: Volatile rule pending activation]        
 * xref:packages/release_rpm_ostree_task.adoc#rpm_ostree_task__builder_image_param[rpm-ostree Task: Builder image parameter]        
 * xref:packages/release_rpm_ostree_task.adoc#rpm_ostree_task__rule_data[rpm-ostree Task: Rule data]
 
@@ -227,6 +243,7 @@ Rules included:
 * xref:packages/release_attestation_type.adoc#attestation_type__known_attestation_types_provided[Attestation type: Known attestation types provided]        
 * xref:packages/release_attestation_type.adoc#attestation_type__pipelinerun_attestation_found[Attestation type: PipelineRun attestation found]        
 * xref:packages/release_cve.adoc#cve__unpatched_cve_blockers[CVE checks: Blocking unpatched CVE check]        
+* xref:packages/release_cve.adoc#cve__cve_results_found[CVE checks: CVE scan results found]        
 * xref:packages/release_cve.adoc#cve__cve_warnings[CVE checks: Non-blocking CVE check]        
 * xref:packages/release_cve.adoc#cve__rule_data_provided[CVE checks: Rule data provided]        
 * xref:packages/release_git_branch.adoc#git_branch__git_branch[Git branch checks: Builds have a trusted target branch]        
@@ -244,7 +261,10 @@ Rules included:
 * xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__allowed_package_sources[SBOM CycloneDX: Allowed package sources]        
 * xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__disallowed_package_attributes[SBOM CycloneDX: Disallowed package attributes]        
 * xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__disallowed_package_external_references[SBOM CycloneDX: Disallowed package external references]        
-* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid[SBOM CycloneDX: Valid]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__cdx_supported_version[SBOM CycloneDX: Supported Version]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid_cdx_1_4[SBOM CycloneDX: Valid 1.4]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid_cdx_1_5[SBOM CycloneDX: Valid 1.5]        
+* xref:packages/release_sbom_cyclonedx.adoc#sbom_cyclonedx__valid_cdx_1_6[SBOM CycloneDX: Valid 1.6]        
 * xref:packages/release_sbom.adoc#sbom__disallowed_packages_provided[SBOM: Disallowed packages list is provided]        
 * xref:packages/release_slsa_build_build_service.adoc#slsa_build_build_service__allowed_builder_ids_provided[SLSA - Build - Build Service: Allowed builder IDs provided]        
 * xref:packages/release_slsa_build_build_service.adoc#slsa_build_build_service__slsa_builder_id_accepted[SLSA - Build - Build Service: SLSA Builder ID is known and accepted]        
@@ -278,6 +298,7 @@ Rules included:
 * xref:packages/release_test.adoc#test__no_skipped_tests[Test: No tests were skipped]        
 * xref:packages/release_test.adoc#test__test_results_known[Test: No unsupported test result values found]        
 * xref:packages/release_test.adoc#test__rule_data_provided[Test: Rule data provided]        
+* xref:packages/release_test.adoc#test__test_data_found[Test: Test data found in task results]        
 * xref:packages/release_test.adoc#test__test_results_found[Test: Test data includes results key]        
 * xref:packages/release_trusted_task.adoc#trusted_task__data_format[Trusted Task checks: Data format]        
 * xref:packages/release_trusted_task.adoc#trusted_task__pinned[Trusted Task checks: Task references are pinned]        
@@ -299,6 +320,8 @@ a| Includes policy rules required to meet SLSA Level 3.
 
 Rules included:
         
+* xref:packages/release_attestation_type.adoc#attestation_type__known_attestation_type[Attestation type: Known attestation type found]        
+* xref:packages/release_attestation_type.adoc#attestation_type__pipelinerun_attestation_found[Attestation type: PipelineRun attestation found]        
 * xref:packages/release_slsa_build_build_service.adoc#slsa_build_build_service__allowed_builder_ids_provided[SLSA - Build - Build Service: Allowed builder IDs provided]        
 * xref:packages/release_slsa_build_build_service.adoc#slsa_build_build_service__slsa_builder_id_found[SLSA - Build - Build Service: SLSA Builder ID found]        
 * xref:packages/release_slsa_build_build_service.adoc#slsa_build_build_service__slsa_builder_id_accepted[SLSA - Build - Build Service: SLSA Builder ID is known and accepted]        
@@ -453,7 +476,7 @@ a| SLSA v1 verification model states:
 This package correlates the provided source code reference with the source code referenced in the attestation.
 
 | xref:packages/release_sbom_spdx.adoc[sbom_spdx]
-a| Checks different properties of the CycloneDX SBOMs associated with the image being validated.
+a| Checks different properties of the SPDX SBOMs associated with the image being validated.
 
 | xref:packages/release_schedule.adoc[schedule]
 a| Rules that verify the current date conform to a given schedule.
@@ -469,6 +492,9 @@ a| Conforma requires that each build was subjected to a set of tests and that th
 
 | xref:packages/release_trusted_task.adoc[trusted_task]
 a| This package is used to verify all the Tekton Tasks involved in building the image are trusted. Trust is established by comparing the Task references found in the SLSA Provenance with a pre-defined list of trusted Tasks, which is expected to be provided as a data source that creates the `data.trusted_tasks` in the format demonstrated at https://github.com/conforma/policy/blob/main/example/data/trusted_tekton_tasks.yml. The list can be extended or customized using the `trusted_tasks` rule data key which is merged into the `trusted_tasks` data.
+
+| xref:packages/release_volatile_config.adoc[volatile_config]
+a| This package generates warnings for volatile configuration rules that have lifecycle events requiring attention. Volatile config rules can include or exclude policy rules with time-based constraints (effectiveOn/effectiveUntil). Warnings help users proactively manage rule expirations and activations. The optional `reference` field in volatile criteria can be used to link to related documentation (e.g., Jira issues) but is not included in warnings.
 
 | xref:packages/release_rpm_ostree_task.adoc[rpm_ostree_task]
 a| This package is responsible for verifying the rpm-ostree Tekton Task was executed with the expected parameters.
